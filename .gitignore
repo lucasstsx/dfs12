@@ -1,0 +1,14 @@
+# Node.js
+node_modules/
+npm-debug.log*
+*.log
+
+# Environment Variables
+.env
+
+# Prisma
+/generated/prisma
+
+# OS files
+.DS_Store
+Thumbs.db
