@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import pessoasRoutes from './pessoa.routes.js';
 
 const router = Router();
 
@@ -11,6 +12,6 @@ router.get('/health', (req, res) => {
 });
 
 // aqui a gente define as rotas, importando de outros arquivos para melhor organização, exemplo:
-// router.use('/pessoas', pessoasRoutes);
+router.use('/pessoas', pessoasRoutes);
 
 export default router;
