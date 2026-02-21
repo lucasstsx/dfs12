@@ -1,14 +1,15 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
+// Configuração principal do Prisma, define o banco de dados e as tabelas (Models)
+// Para aplicar alterações, execute: npx prisma migrate dev
 generator client {
   provider = "prisma-client-js"
 }
 
+// Configuração do driver do banco de dados (neste caso, PostgreSQL)
 datasource db {
   provider = "postgresql"
 }
 
+// Modelo "Pessoa" que representa a tabela de pessoas no banco de dados
 model Pessoa {
   id        String  @id @default(uuid())
   nome      String
