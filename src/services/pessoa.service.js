@@ -1,5 +1,5 @@
 // A camada de serviço lida com a regra de negócio e interação direta com o Prisma
-import prisma from "../PrismaClient.js";
+import prisma from "../config/prisma.js";
 
 export const PessoaService = {
   // Realiza a inserção no banco de dados usando o Prisma Client
