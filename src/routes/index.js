@@ -1,9 +1,10 @@
 import { Router } from 'express';
+// Importação das rotas específicas da entidade "pessoa"
 import pessoasRoutes from './pessoa.routes.js';
 
 const router = Router();
 
-// Rota de Health Check
+// Rota de Health Check para verificar se o servidor está ativo
 router.get('/health', (req, res) => {
     res.json({
         status: 'ok',
@@ -11,7 +12,7 @@ router.get('/health', (req, res) => {
     });
 });
 
-// aqui a gente define as rotas, importando de outros arquivos para melhor organização, exemplo:
+// Agrupa as rotas de "pessoas" sob o caminho /pessoas
 router.use('/pessoas', pessoasRoutes);
 
 export default router;
