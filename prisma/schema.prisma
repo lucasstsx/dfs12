@@ -31,16 +31,27 @@ enum Nivel {
   @@map("niveis")
 }
 
+enum Categoria {
+  MUSICA     @map("musica")
+  TECNOLOGIA @map("tecnologia")
+  EDUCACAO   @map("educacao")
+  ARTES      @map("artes")
+  IDIOMAS    @map("idiomas")
+  OUTROS     @map("outros")
+
+  @@map("categorias")
+}
+
 // Modelo "Conhecimento" que representa a tabela de conhecimentos no banco de dados
 model Conhecimento {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   titulo    String
   descricao String
-  categoria String
+  categoria Categoria
   nivel     Nivel
-  pessoaId  String   @map("pessoa_id")
-  pessoa    Pessoa   @relation(fields: [pessoaId], references: [id], onDelete: Cascade)
-  criadoEm  DateTime @default(now())
+  pessoaId  String    @map("pessoa_id")
+  pessoa    Pessoa    @relation(fields: [pessoaId], references: [id], onDelete: Cascade)
+  criadoEm  DateTime  @default(now())
 
   @@map("conhecimentos")
 }
