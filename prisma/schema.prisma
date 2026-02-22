@@ -11,9 +11,36 @@ datasource db {
 
 // Modelo "Pessoa" que representa a tabela de pessoas no banco de dados
 model Pessoa {
-  id        String  @id @default(uuid())
-  nome      String
-  email     String  @unique
-  telefone  String
-  descricao String?
+  id            String         @id @default(uuid())
+  nome          String
+  email         String         @unique
+  telefone      String
+  descricao     String? // A interrogação indica que é opcional (Breve descrição)
+  conhecimentos Conhecimento[] // Relação 1:N
+  criadoEm      DateTime       @default(now())
+
+  @@map("pessoas")
+}
+
+// Enum para o nível de conhecimento
+enum Nivel {
+  BASICO        @map("basico")
+  INTERMEDIARIO @map("intermediario")
+  AVANCADO      @map("avancado")
+
+  @@map("niveis")
+}
+
+// Modelo "Conhecimento" que representa a tabela de conhecimentos no banco de dados
+model Conhecimento {
+  id        String   @id @default(uuid())
+  titulo    String
+  descricao String
+  categoria String
+  nivel     Nivel
+  pessoaId  String   @map("pessoa_id")
+  pessoa    Pessoa   @relation(fields: [pessoaId], references: [id], onDelete: Cascade)
+  criadoEm  DateTime @default(now())
+
+  @@map("conhecimentos")
 }
