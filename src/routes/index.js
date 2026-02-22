@@ -6,10 +6,10 @@ const router = Router();
 
 // Rota de Health Check para verificar se o servidor está ativo
 router.get('/health', (req, res) => {
-    res.json({
-        status: 'ok',
-        timestamp: new Date().toISOString()
-    });
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString()
+  });
 });
 
 // Agrupa as rotas de "pessoas" sob o caminho /pessoas

@@ -8,5 +8,12 @@ const router = Router();
 router.post("/", PessoaController.createPessoa);
 // Rota GET para listar todas as pessoas cadastradas
 router.get("/", PessoaController.getPessoas);
+// Rota GET para buscar uma pessoa por ID
+router.get("/:id", PessoaController.getPessoaById);
+// Rota PUT para atualizar uma pessoa
+router.patch("/:id", PessoaController.updatePessoa);
+// Rota DELETE para deletar uma pessoa
+router.delete("/:id", PessoaController.deletePessoa);
+
 
 export default router;
