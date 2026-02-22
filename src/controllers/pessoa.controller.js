@@ -6,14 +6,15 @@ export const PessoaController = {
   // Lógica para criação de uma nova pessoa
   async createPessoa(req, res) {
     try {
-      const { nome, email, telefone } = req.body;
+
+      const { nome, email, telefone, descricao } = req.body;
       // Verificação simples para garantir que os campos obrigatórios foram enviados
       if (!nome || !email || !telefone) {
         return res.status(400).json({ error: 'Dados incompletos' });
       }
 
       // Chama a camada de serviço para processar a criação
-      const pessoa = await PessoaService.createPessoa({ nome, email, telefone });
+      const pessoa = await PessoaService.createPessoa({ nome, email, telefone, descricao });
       return res.status(201).json(pessoa);
     } catch (error) {
       // Retorna erro genérico em caso de falha no servidor ou banco de dados
