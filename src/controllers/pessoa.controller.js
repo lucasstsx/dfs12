@@ -1,10 +1,11 @@
 // O controlador recebe os dados da requisição HTTP e retorna a resposta
 import { PessoaService } from "../services/pessoa.service.js";
+import { isValidUUID } from "../utils/validators.js";
 
 export const PessoaController = {
 
   // Lógica para criação de uma nova pessoa
-  async createPessoa(req, res) {
+  async create(req, res) {
     try {
 
       const { nome, email, telefone, descricao } = req.body;
@@ -14,7 +15,7 @@ export const PessoaController = {
       }
 
       // Chama a camada de serviço para processar a criação
-      const pessoa = await PessoaService.createPessoa({ nome, email, telefone, descricao });
+      const pessoa = await PessoaService.create({ nome, email, telefone, descricao });
       return res.status(201).json(pessoa);
 
     } catch (error) {
@@ -28,13 +29,13 @@ export const PessoaController = {
   },
 
   // Lógica para buscar a lista paginada de pessoas
-  async getPessoas(req, res) {
+  async getAll(req, res) {
     try {
       // Garante que os parâmetros de paginação sejam números inteiros positivos
       const page = Math.max(1, parseInt(req.query.page) || 1);
       const limit = Math.max(1, parseInt(req.query.limit) || 10);
 
-      const resultado = await PessoaService.getPessoas(page, limit);
+      const resultado = await PessoaService.getAll(page, limit);
       return res.status(200).json(resultado);
     } catch (error) {
       console.error(error);
@@ -43,10 +44,16 @@ export const PessoaController = {
     }
   },
 
-  async getPessoaById(req, res) {
+  async getById(req, res) {
     try {
       const { id } = req.params;
-      const pessoa = await PessoaService.getPessoaById(id);
+
+      // Verifica se o ID é um UUID v4 válido
+      if (!isValidUUID(id)) {
+        return res.status(400).json({ error: 'ID inválido' });
+      }
+
+      const pessoa = await PessoaService.getById(id);
 
       if (!pessoa) {
         return res.status(404).json({ error: 'Pessoa não encontrada' });
@@ -61,13 +68,19 @@ export const PessoaController = {
     }
   },
 
-  async updatePessoa(req, res) {
+  async update(req, res) {
     try {
       const { id } = req.params;
+
+      // Verifica se o ID é um UUID v4 válido
+      if (!isValidUUID(id)) {
+        return res.status(400).json({ error: 'ID inválido' });
+      }
+
       const { nome, email, telefone, descricao } = req.body;
 
       // Tenta atualizar
-      const pessoa = await PessoaService.updatePessoa(id, { nome, email, telefone, descricao });
+      const pessoa = await PessoaService.update(id, { nome, email, telefone, descricao });
 
 
       return res.status(200).json(pessoa);
@@ -84,10 +97,16 @@ export const PessoaController = {
     }
   },
 
-  async deletePessoa(req, res) {
+  async delete(req, res) {
     try {
       const { id } = req.params;
-      await PessoaService.deletePessoa(id);
+
+      // Verifica se o ID é um UUID v4 válido
+      if (!isValidUUID(id)) {
+        return res.status(400).json({ error: 'ID inválido' });
+      }
+
+      await PessoaService.delete(id);
 
       return res.status(204).send();
 

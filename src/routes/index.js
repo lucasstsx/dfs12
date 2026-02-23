@@ -1,6 +1,8 @@
 import { Router } from 'express';
 // Importação das rotas específicas da entidade "pessoa"
 import pessoasRoutes from './pessoa.routes.js';
+// Importação das rotas específicas da entidade "conhecimento"
+import conhecimentosRoutes from './conhecimento.routes.js';
 
 const router = Router();
 
@@ -14,5 +16,8 @@ router.get('/health', (req, res) => {
 
 // Agrupa as rotas de "pessoas" sob o caminho /pessoas
 router.use('/pessoas', pessoasRoutes);
+
+// Agrupa as rotas de "conhecimentos" sob o caminho /conhecimentos
+router.use('/conhecimentos', conhecimentosRoutes);
 
 export default router;
