@@ -1,5 +1,5 @@
 import { ConhecimentoService } from "../services/conhecimento.service.js";
-import { isValidUUID } from "../utils/validators.js";
+import { isValidUUID, CATEGORIAS_VALIDAS, NIVEIS_VALIDOS } from "../utils/validators.js";
 
 export const ConhecimentoController = {
 
@@ -12,6 +12,16 @@ export const ConhecimentoController = {
       // Verificacao simples de dados
       if (!titulo || !descricao || !categoria || !nivel || !pessoaId) {
         return res.status(400).json({ error: 'Dados incompletos. Titulo, descricao, categoria, nivel e pessoaId são obrigatórios.' });
+      }
+
+      // Valida o enum categoria
+      if (!CATEGORIAS_VALIDAS.includes(categoria)) {
+        return res.status(400).json({ error: `Categoria inválida. Valores aceitos: ${CATEGORIAS_VALIDAS.join(', ')}` });
+      }
+
+      // Valida o enum nivel
+      if (!NIVEIS_VALIDOS.includes(nivel)) {
+        return res.status(400).json({ error: `Nível inválido. Valores aceitos: ${NIVEIS_VALIDOS.join(', ')}` });
       }
 
       // Chama a camada de serviço para processar a criação
@@ -27,18 +37,35 @@ export const ConhecimentoController = {
     } catch (error) {
       console.error(error);
 
+      // P2003: violação de FK — pessoaId não existe no banco
+      if (error.code === 'P2003') {
+        return res.status(404).json({ error: 'Pessoa não encontrada' });
+      }
+
       return res.status(500).json({ error: 'Erro interno ao criar conhecimento' });
     }
   },
 
-  // Lógica para buscar a lista paginada de conhecimentos
+  // Lógica para buscar a lista paginada de conhecimentos com filtros opcionais
   async getAll(req, res) {
     try {
       // Garante que os parâmetros de paginação sejam números inteiros positivos
       const page = Math.max(1, parseInt(req.query.page) || 1);
       const limit = Math.max(1, parseInt(req.query.limit) || 10);
 
-      const conhecimentos = await ConhecimentoService.getAll(page, limit);
+      const { categoria, nivel, busca } = req.query;
+
+      // Valida o enum categoria, se fornecido
+      if (categoria && !CATEGORIAS_VALIDAS.includes(categoria)) {
+        return res.status(400).json({ error: `Categoria inválida. Valores aceitos: ${CATEGORIAS_VALIDAS.join(', ')}` });
+      }
+
+      // Valida o enum nivel, se fornecido
+      if (nivel && !NIVEIS_VALIDOS.includes(nivel)) {
+        return res.status(400).json({ error: `Nível inválido. Valores aceitos: ${NIVEIS_VALIDOS.join(', ')}` });
+      }
+
+      const conhecimentos = await ConhecimentoService.getAll(page, limit, categoria, nivel, busca);
       return res.status(200).json(conhecimentos);
     } catch (error) {
       console.error(error);
@@ -79,6 +106,15 @@ export const ConhecimentoController = {
       // Verifica se o ID é um UUID v4 válido
       if (!isValidUUID(id)) {
         return res.status(400).json({ error: 'ID inválido' });
+      }
+
+      // Valida os enums se foram fornecidos no body
+      const { categoria, nivel } = req.body;
+      if (categoria && !CATEGORIAS_VALIDAS.includes(categoria)) {
+        return res.status(400).json({ error: `Categoria inválida. Valores aceitos: ${CATEGORIAS_VALIDAS.join(', ')}` });
+      }
+      if (nivel && !NIVEIS_VALIDOS.includes(nivel)) {
+        return res.status(400).json({ error: `Nível inválido. Valores aceitos: ${NIVEIS_VALIDOS.join(', ')}` });
       }
 
       // tenta atualizar

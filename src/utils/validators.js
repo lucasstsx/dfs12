@@ -9,3 +9,9 @@ const UUID_V4_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[
 export function isValidUUID(value) {
   return UUID_V4_REGEX.test(value);
 }
+
+// Valores válidos para o enum Categoria (espelho do schema Prisma)
+export const CATEGORIAS_VALIDAS = ['MUSICA', 'TECNOLOGIA', 'EDUCACAO', 'ARTES', 'IDIOMAS', 'OUTROS'];
+
+// Valores válidos para o enum Nivel (espelho do schema Prisma)
+export const NIVEIS_VALIDOS = ['BASICO', 'INTERMEDIARIO', 'AVANCADO'];

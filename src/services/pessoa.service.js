@@ -16,7 +16,7 @@ export const PessoaService = {
 
     // O $transaction garante que ambas as operações sejam executadas juntas, ou nenhuma delas
     const [pessoas, total] = await prisma.$transaction([
-      prisma.pessoa.findMany({ skip, take: limit }),
+      prisma.pessoa.findMany({ skip, take: limit, orderBy: { criadoEm: 'desc' } }),
       prisma.pessoa.count(),
     ]);
 
@@ -32,7 +32,7 @@ export const PessoaService = {
   },
 
   async getById(id) {
-    const pessoa = await prisma.pessoa.findUnique({ where: { id } });
+    const pessoa = await prisma.pessoa.findUnique({ where: { id }, include: { conhecimentos: true } });
     return pessoa;
   },
 

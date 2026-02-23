@@ -93,6 +93,11 @@ export const PessoaController = {
         return res.status(404).json({ error: 'Pessoa não encontrada para atualização' });
       }
 
+      // No Prisma, o erro de "registro único" é o P2002 então:
+      if (error.code === 'P2002') {
+        return res.status(409).json({ error: 'E-mail já cadastrado' });
+      }
+
       return res.status(500).json({ error: 'Erro interno ao atualizar pessoa' });
     }
   },
