@@ -3,6 +3,8 @@ import { Router } from 'express';
 import pessoasRoutes from './pessoa.routes.js';
 // Importação das rotas específicas da entidade "conhecimento"
 import conhecimentosRoutes from './conhecimento.routes.js';
+// Importação das rotas de autenticação
+import authRoutes from './auth.routes.js';
 
 const router = Router();
 
@@ -13,6 +15,9 @@ router.get('/health', (req, res) => {
     timestamp: new Date().toISOString()
   });
 });
+
+// Agrupa as rotas de autenticação sob o caminho /auth
+router.use('/auth', authRoutes);
 
 // Agrupa as rotas de "pessoas" sob o caminho /pessoas
 router.use('/pessoas', pessoasRoutes);

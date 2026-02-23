@@ -117,6 +117,15 @@ export const ConhecimentoController = {
         return res.status(400).json({ error: `Nível inválido. Valores aceitos: ${NIVEIS_VALIDOS.join(', ')}` });
       }
 
+      // Verifica se o conhecimento existe e pertence à pessoa autenticada
+      const existente = await ConhecimentoService.getById(id);
+      if (!existente) {
+        return res.status(404).json({ error: 'Conhecimento não encontrado' });
+      }
+      if (existente.pessoaId !== req.pessoaId) {
+        return res.status(403).json({ error: 'Sem permissão para modificar este conhecimento' });
+      }
+
       // tenta atualizar
       const conhecimento = await ConhecimentoService.update(id, req.body);
 
@@ -141,6 +150,15 @@ export const ConhecimentoController = {
       // Verifica se o ID é um UUID v4 válido
       if (!isValidUUID(id)) {
         return res.status(400).json({ error: 'ID inválido' });
+      }
+
+      // Verifica se o conhecimento existe e pertence à pessoa autenticada
+      const existente = await ConhecimentoService.getById(id);
+      if (!existente) {
+        return res.status(404).json({ error: 'Conhecimento não encontrado' });
+      }
+      if (existente.pessoaId !== req.pessoaId) {
+        return res.status(403).json({ error: 'Sem permissão para excluir este conhecimento' });
       }
 
       await ConhecimentoService.delete(id);
