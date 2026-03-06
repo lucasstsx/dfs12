@@ -16,6 +16,7 @@ model Pessoa {
   email         String         @unique
   telefone      String
   descricao     String? // A interrogação indica que é opcional (Breve descrição)
+  senha         String         // Hash bcrypt da senha para autenticação
   conhecimentos Conhecimento[] // Relação 1:N
   criadoEm      DateTime       @default(now())
 

@@ -26,7 +26,7 @@ export const ConhecimentoService = {
 
     // O $transaction garante que ambas as operações sejam executadas juntas, ou nenhuma delas
     const [conhecimentos, total] = await prisma.$transaction([
-      prisma.conhecimento.findMany({ where, skip, take: limit, orderBy: { criadoEm: 'desc' }, include: { pessoa: true } }),
+      prisma.conhecimento.findMany({ where, skip, take: limit, orderBy: { criadoEm: 'desc' }, include: { pessoa: { omit: { senha: true } } } }),
       prisma.conhecimento.count({ where }),
     ]);
 
@@ -42,7 +42,7 @@ export const ConhecimentoService = {
   },
 
   async getById(id) {
-    const conhecimento = await prisma.conhecimento.findUnique({ where: { id }, include: { pessoa: true } });
+    const conhecimento = await prisma.conhecimento.findUnique({ where: { id }, include: { pessoa: { omit: { senha: true } } } });
     return conhecimento;
   },
 

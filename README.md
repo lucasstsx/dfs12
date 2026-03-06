@@ -20,7 +20,7 @@ Foi utilizado o **Node.js com Express** para criar a API, **Prisma ORM** para re
 - PostgreSQL rodando localmente ou em nuvem
 - Arquivo `.env` configurado (ver instruções abaixo)
 
-> **Atenção:** a branch `feat/autenticacao` possui estrutura de banco diferente desta branch — ela adiciona o campo `senha` na tabela `pessoas`. Recomenda-se usar bancos de dados separados para cada branch a fim de evitar conflitos de migration.
+> **Atenção:** esta branch (`feat/autenticacao`) possui estrutura de banco diferente da branch `main` — a tabela `pessoas` contém o campo `senha`, que não existe na `main`. Recomenda-se usar bancos de dados separados para cada branch a fim de evitar conflitos de migration.
 
 ---
 
@@ -43,13 +43,14 @@ npm install
 ```bash
 cp .env.example .env
 ```
-Edite o arquivo `.env` e preencha com as credenciais do seu PostgreSQL:
+Edite o arquivo `.env` e preencha com as credenciais do seu PostgreSQL e uma chave secreta para o JWT:
 ```
-DATABASE_URL="postgresql://SEU_USUARIO:SUA_SENHA@localhost:5432/banco_trocas?schema=public"
+DATABASE_URL="postgresql://SEU_USUARIO:SUA_SENHA@localhost:5432/banco_trocas_auth?schema=public"
 PORT=3000
+JWT_SECRET=sua_chave_secreta_aqui
 ```
 
-> Recomenda-se usar um banco de dados com nome diferente do utilizado na branch `feat/autenticacao` (ex: `banco_trocas`) para evitar conflitos, pois a estrutura das tabelas é diferente entre as branches.
+> Recomenda-se usar um banco de dados com nome diferente do utilizado na branch `main` (ex: `banco_trocas_auth`) para evitar conflitos, pois a estrutura das tabelas é diferente entre as branches.
 
 **4. Execute as migrations do banco de dados**
 ```bash
@@ -83,6 +84,7 @@ O servidor estará disponível em `http://localhost:3000`.
 | `email` | String | Sim | Unico (constraint unique) |
 | `telefone` | String | Sim | Forma alternativa de contato |
 | `descricao` | String | Nao | Breve apresentacao da pessoa |
+| `senha` | String | Sim | Hash bcrypt — nunca retornado nas respostas |
 | `criadoEm` | DateTime | Sim | Gerado automaticamente |
 
 ### Tabela `conhecimentos`
@@ -120,15 +122,45 @@ O servidor estará disponível em `http://localhost:3000`.
 
 ---
 
-### Pessoas
+### Autenticacao
 
 | Metodo | Rota | Descricao |
 |---|---|---|
-| `POST` | `/api/pessoas` | Cria uma nova pessoa |
-| `GET` | `/api/pessoas` | Lista pessoas com paginacao |
-| `GET` | `/api/pessoas/:id` | Busca pessoa por ID (inclui conhecimentos) |
-| `PATCH` | `/api/pessoas/:id` | Atualiza dados de uma pessoa |
-| `DELETE` | `/api/pessoas/:id` | Remove uma pessoa e seus conhecimentos |
+| `POST` | `/api/auth/login` | Autentica uma pessoa e retorna um token JWT |
+
+**Body — POST `/api/auth/login`**
+```json
+{
+  "email": "lucas@email.com",
+  "senha": "minhasenha"
+}
+```
+
+**Resposta — POST `/api/auth/login`**
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+O token retornado deve ser enviado no header `Authorization` das rotas protegidas:
+```
+Authorization: Bearer <token>
+```
+
+O token expira em **7 dias**.
+
+---
+
+### Pessoas
+
+| Metodo | Rota | Descricao | Autenticacao |
+|---|---|---|---|
+| `POST` | `/api/pessoas` | Cria uma nova pessoa | Nao |
+| `GET` | `/api/pessoas` | Lista pessoas com paginacao | Nao |
+| `GET` | `/api/pessoas/:id` | Busca pessoa por ID (inclui conhecimentos) | Nao |
+| `PATCH` | `/api/pessoas/:id` | Atualiza dados de uma pessoa | Sim — apenas o proprio dono |
+| `DELETE` | `/api/pessoas/:id` | Remove uma pessoa e seus conhecimentos | Sim — apenas o proprio dono |
 
 **Body — POST `/api/pessoas`**
 ```json
@@ -136,7 +168,8 @@ O servidor estará disponível em `http://localhost:3000`.
   "nome": "Lucas Silva",
   "email": "lucas@email.com",
   "telefone": "81999999999",
-  "descricao": "Desenvolvedor apaixonado por música"
+  "descricao": "Desenvolvedor apaixonado por música",
+  "senha": "minhasenha"
 }
 ```
 
@@ -190,13 +223,13 @@ O servidor estará disponível em `http://localhost:3000`.
 
 ### Conhecimentos
 
-| Metodo | Rota | Descricao |
-|---|---|---|
-| `POST` | `/api/conhecimentos` | Cria um novo conhecimento |
-| `GET` | `/api/conhecimentos` | Lista conhecimentos com paginacao e filtros |
-| `GET` | `/api/conhecimentos/:id` | Busca conhecimento por ID (inclui responsavel) |
-| `PATCH` | `/api/conhecimentos/:id` | Atualiza um conhecimento |
-| `DELETE` | `/api/conhecimentos/:id` | Remove um conhecimento |
+| Metodo | Rota | Descricao | Autenticacao |
+|---|---|---|---|
+| `POST` | `/api/conhecimentos` | Cria um novo conhecimento | Sim |
+| `GET` | `/api/conhecimentos` | Lista conhecimentos com paginacao e filtros | Nao |
+| `GET` | `/api/conhecimentos/:id` | Busca conhecimento por ID (inclui responsavel) | Nao |
+| `PATCH` | `/api/conhecimentos/:id` | Atualiza um conhecimento | Sim — apenas o proprio dono |
+| `DELETE` | `/api/conhecimentos/:id` | Remove um conhecimento | Sim — apenas o proprio dono |
 
 **Body — POST `/api/conhecimentos`**
 ```json
@@ -275,6 +308,8 @@ GET /api/conhecimentos?categoria=TECNOLOGIA&nivel=BASICO&busca=python
 | `201` | Criado com sucesso |
 | `204` | Removido com sucesso (sem corpo) |
 | `400` | Dados inválidos (campos faltando, enum inválido, UUID inválido) |
+| `401` | Token ausente ou inválido |
+| `403` | Sem permissão para modificar este recurso |
 | `404` | Recurso não encontrado |
 | `409` | Conflito — e-mail já cadastrado |
 | `500` | Erro interno do servidor |
@@ -358,11 +393,37 @@ GET /api/conhecimentos?categoria=TECNOLOGIA&nivel=BASICO&busca=python
 
 ---
 
-### Autenticacao — Implementado na branch `feat/autenticacao`
+### Autenticacao — Implementado
 
 > **PDF — Seção "Extras":** "Implementar um sistema de autenticação para: pessoas cadastradas editarem e excluírem apenas suas próprias ofertas."
 
-Funcionalidade implementada na branch `feat/autenticacao`. A integração com a branch principal ocorrerá quando o desenvolvimento do frontend for iniciado. O README dessa branch documenta como usar a API com autenticação.
+**Cadastro com senha**
+
+`POST /api/pessoas` agora exige o campo `senha`. A senha é armazenada como hash bcrypt (custo 10) — nunca em texto puro. Nenhum endpoint retorna o campo `senha` nas respostas.
+
+**Arquivo:** `src/controllers/pessoa.controller.js` — `bcrypt.hash` no `create`; `src/services/pessoa.service.js` — `omit: { senha: true }` em todas as queries
+
+**Login e token JWT**
+
+`POST /api/auth/login` valida as credenciais via `bcrypt.compare` e retorna um token JWT assinado com `JWT_SECRET`, contendo `{ id, email }` no payload e validade de 7 dias.
+
+**Arquivos:** `src/controllers/auth.controller.js`, `src/services/auth.service.js`, `src/routes/auth.routes.js`
+
+**Middleware de autenticacao**
+
+O middleware `authMiddleware` valida o token JWT enviado no header `Authorization: Bearer <token>` e injeta `req.pessoaId` para uso nos controllers. Retorna `401` se o token estiver ausente ou inválido.
+
+**Arquivo:** `src/middlewares/auth.middleware.js`
+
+**Protecao de rotas e verificacao de dono**
+
+As rotas de escrita exigem autenticação e verificam se o recurso pertence à pessoa autenticada:
+
+- `PATCH /api/pessoas/:id` e `DELETE /api/pessoas/:id` — retornam `403` se `id !== req.pessoaId`
+- `POST /api/conhecimentos` — exige token
+- `PATCH /api/conhecimentos/:id` e `DELETE /api/conhecimentos/:id` — retornam `403` se o conhecimento não pertencer à pessoa autenticada
+
+**Arquivos:** `src/routes/pessoa.routes.js`, `src/routes/conhecimento.routes.js`, `src/controllers/pessoa.controller.js`, `src/controllers/conhecimento.controller.js`
 
 ---
 
@@ -379,13 +440,18 @@ dfs12/
 │   ├── config/
 │   │   └── prisma.js          # Instancia do Prisma Client (singleton)
 │   ├── controllers/
+│   │   ├── auth.controller.js         # Recebe requisicao de login e retorna JWT
 │   │   ├── pessoa.controller.js       # Recebe requisicao, valida e retorna resposta (Pessoa)
 │   │   └── conhecimento.controller.js # Recebe requisicao, valida enums e retorna resposta (Conhecimento)
+│   ├── middlewares/
+│   │   └── auth.middleware.js         # Valida JWT e injeta req.pessoaId
 │   ├── services/
+│   │   ├── auth.service.js            # Valida credenciais e gera token JWT
 │   │   ├── pessoa.service.js          # Regras de negocio e queries Prisma para Pessoa
 │   │   └── conhecimento.service.js    # Regras de negocio e queries Prisma para Conhecimento
 │   ├── routes/
 │   │   ├── index.js                   # Agrega e registra todas as rotas
+│   │   ├── auth.routes.js             # Rotas de /api/auth
 │   │   ├── pessoa.routes.js           # Rotas de /api/pessoas
 │   │   └── conhecimento.routes.js     # Rotas de /api/conhecimentos
 │   └── utils/

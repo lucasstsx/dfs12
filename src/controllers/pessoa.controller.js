@@ -1,4 +1,5 @@
 // O controlador recebe os dados da requisição HTTP e retorna a resposta
+import bcrypt from 'bcryptjs';
 import { PessoaService } from "../services/pessoa.service.js";
 import { isValidUUID } from "../utils/validators.js";
 
@@ -8,15 +9,21 @@ export const PessoaController = {
   async create(req, res) {
     try {
 
-      const { nome, email, telefone, descricao } = req.body;
+      const { nome, email, telefone, descricao, senha } = req.body;
       // Verificação simples para garantir que os campos obrigatórios foram enviados
-      if (!nome || !email || !telefone) {
-        return res.status(400).json({ error: 'Dados incompletos. Nome, email e telefone são obrigatórios.' });
+      if (!nome || !email || !telefone || !senha) {
+        return res.status(400).json({ error: 'Dados incompletos. Nome, email, telefone e senha são obrigatórios.' });
       }
 
+      // Gera o hash da senha antes de salvar no banco (nunca armazenar senha em texto puro)
+      const senhaHash = await bcrypt.hash(senha, 10);
+
       // Chama a camada de serviço para processar a criação
-      const pessoa = await PessoaService.create({ nome, email, telefone, descricao });
-      return res.status(201).json(pessoa);
+      const pessoa = await PessoaService.create({ nome, email, telefone, descricao, senha: senhaHash });
+
+      // Remove a senha do retorno para não expô-la na resposta
+      const { senha: _, ...pessoaSemSenha } = pessoa;
+      return res.status(201).json(pessoaSemSenha);
 
     } catch (error) {
       console.error(error);
@@ -77,6 +84,11 @@ export const PessoaController = {
         return res.status(400).json({ error: 'ID inválido' });
       }
 
+      // Verifica se a pessoa autenticada está tentando modificar seus próprios dados
+      if (id !== req.pessoaId) {
+        return res.status(403).json({ error: 'Sem permissão para modificar esta pessoa' });
+      }
+
       const { nome, email, telefone, descricao } = req.body;
 
       // Tenta atualizar
@@ -109,6 +121,11 @@ export const PessoaController = {
       // Verifica se o ID é um UUID v4 válido
       if (!isValidUUID(id)) {
         return res.status(400).json({ error: 'ID inválido' });
+      }
+
+      // Verifica se a pessoa autenticada está tentando remover seus próprios dados
+      if (id !== req.pessoaId) {
+        return res.status(403).json({ error: 'Sem permissão para excluir esta pessoa' });
       }
 
       await PessoaService.delete(id);
