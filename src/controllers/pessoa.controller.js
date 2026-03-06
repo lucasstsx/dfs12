@@ -84,8 +84,8 @@ export const PessoaController = {
         return res.status(400).json({ error: 'ID inválido' });
       }
 
-      // Verifica se a pessoa autenticada está tentando modificar seus próprios dados
-      if (id !== req.pessoaId) {
+      // Verifica se a pessoa autenticada está tentando modificar seus próprios dados ou é admin
+      if (id !== req.pessoaId && !req.isAdmin) {
         return res.status(403).json({ error: 'Sem permissão para modificar esta pessoa' });
       }
 
@@ -123,8 +123,8 @@ export const PessoaController = {
         return res.status(400).json({ error: 'ID inválido' });
       }
 
-      // Verifica se a pessoa autenticada está tentando remover seus próprios dados
-      if (id !== req.pessoaId) {
+      // Verifica se a pessoa autenticada está tentando remover seus próprios dados ou é admin
+      if (id !== req.pessoaId && !req.isAdmin) {
         return res.status(403).json({ error: 'Sem permissão para excluir esta pessoa' });
       }
 

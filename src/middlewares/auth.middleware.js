@@ -10,8 +10,9 @@ export function authMiddleware(req, res, next) {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    // Disponibiliza o ID da pessoa autenticada para os controllers
+    // Disponibiliza o ID e o status de admin da pessoa autenticada para os controllers
     req.pessoaId = decoded.id;
+    req.isAdmin = decoded.isAdmin;
     next();
   } catch {
     return res.status(401).json({ error: 'Token inválido ou expirado' });

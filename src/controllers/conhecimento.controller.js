@@ -122,7 +122,7 @@ export const ConhecimentoController = {
       if (!existente) {
         return res.status(404).json({ error: 'Conhecimento não encontrado' });
       }
-      if (existente.pessoaId !== req.pessoaId) {
+      if (existente.pessoaId !== req.pessoaId && !req.isAdmin) {
         return res.status(403).json({ error: 'Sem permissão para modificar este conhecimento' });
       }
 
@@ -157,9 +157,10 @@ export const ConhecimentoController = {
       if (!existente) {
         return res.status(404).json({ error: 'Conhecimento não encontrado' });
       }
-      if (existente.pessoaId !== req.pessoaId) {
+      if (existente.pessoaId !== req.pessoaId && !req.isAdmin) {
         return res.status(403).json({ error: 'Sem permissão para excluir este conhecimento' });
       }
+
 
       await ConhecimentoService.delete(id);
 

@@ -14,9 +14,9 @@ export const AuthService = {
     const senhaValida = await bcrypt.compare(senha, pessoa.senha);
     if (!senhaValida) return null;
 
-    // Gera o token JWT com id e email no payload, expirando em 7 dias
+    // Gera o token JWT com id, email e isAdmin no payload, expirando em 7 dias
     const token = jwt.sign(
-      { id: pessoa.id, email: pessoa.email },
+      { id: pessoa.id, email: pessoa.email, isAdmin: pessoa.isAdmin },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );

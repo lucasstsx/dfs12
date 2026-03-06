@@ -20,8 +20,6 @@ Foi utilizado o **Node.js com Express** para criar a API, **Prisma ORM** para re
 - PostgreSQL rodando localmente ou em nuvem
 - Arquivo `.env` configurado (ver instruções abaixo)
 
-> **Atenção:** esta branch (`feat/autenticacao`) possui estrutura de banco diferente da branch `main` — a tabela `pessoas` contém o campo `senha`, que não existe na `main`. Recomenda-se usar bancos de dados separados para cada branch a fim de evitar conflitos de migration.
-
 ---
 
 ## Como executar
@@ -45,16 +43,14 @@ cp .env.example .env
 ```
 Edite o arquivo `.env` e preencha com as credenciais do seu PostgreSQL e uma chave secreta para o JWT:
 ```
-DATABASE_URL="postgresql://SEU_USUARIO:SUA_SENHA@localhost:5432/banco_trocas_auth?schema=public"
+DATABASE_URL="postgresql://SEU_USUARIO:SUA_SENHA@localhost:5432/banco_trocas?schema=public"
 PORT=3000
 JWT_SECRET=sua_chave_secreta_aqui
 ```
 
-> Recomenda-se usar um banco de dados com nome diferente do utilizado na branch `main` (ex: `banco_trocas_auth`) para evitar conflitos, pois a estrutura das tabelas é diferente entre as branches.
-
 **4. Execute as migrations do banco de dados**
 ```bash
-npx prisma migrate deploy
+npx prisma migrate dev
 ```
 
 **5. Gere o Prisma Client**
@@ -85,6 +81,7 @@ O servidor estará disponível em `http://localhost:3000`.
 | `telefone` | String | Sim | Forma alternativa de contato |
 | `descricao` | String | Nao | Breve apresentacao da pessoa |
 | `senha` | String | Sim | Hash bcrypt — nunca retornado nas respostas |
+| `isAdmin` | Boolean | Sim | Define se é administrador (default: false) |
 | `criadoEm` | DateTime | Sim | Gerado automaticamente |
 
 ### Tabela `conhecimentos`
@@ -148,7 +145,7 @@ O token retornado deve ser enviado no header `Authorization` das rotas protegida
 Authorization: Bearer <token>
 ```
 
-O token expira em **7 dias**.
+O token contém `id`, `email` e `isAdmin` no payload e expira em **7 dias**.
 
 ---
 
@@ -159,8 +156,8 @@ O token expira em **7 dias**.
 | `POST` | `/api/pessoas` | Cria uma nova pessoa | Nao |
 | `GET` | `/api/pessoas` | Lista pessoas com paginacao | Nao |
 | `GET` | `/api/pessoas/:id` | Busca pessoa por ID (inclui conhecimentos) | Nao |
-| `PATCH` | `/api/pessoas/:id` | Atualiza dados de uma pessoa | Sim — apenas o proprio dono |
-| `DELETE` | `/api/pessoas/:id` | Remove uma pessoa e seus conhecimentos | Sim — apenas o proprio dono |
+| `PATCH` | `/api/pessoas/:id` | Atualiza dados de uma pessoa | Sim — dono ou admin |
+| `DELETE` | `/api/pessoas/:id` | Remove uma pessoa e seus conhecimentos | Sim — dono ou admin |
 
 **Body — POST `/api/pessoas`**
 ```json
@@ -189,6 +186,7 @@ O token expira em **7 dias**.
   "email": "lucas@email.com",
   "telefone": "81999999999",
   "descricao": "Desenvolvedor apaixonado por música",
+  "isAdmin": false,
   "criadoEm": "2026-02-22T00:00:00.000Z",
   "conhecimentos": [
     {
@@ -228,8 +226,8 @@ O token expira em **7 dias**.
 | `POST` | `/api/conhecimentos` | Cria um novo conhecimento | Sim |
 | `GET` | `/api/conhecimentos` | Lista conhecimentos com paginacao e filtros | Nao |
 | `GET` | `/api/conhecimentos/:id` | Busca conhecimento por ID (inclui responsavel) | Nao |
-| `PATCH` | `/api/conhecimentos/:id` | Atualiza um conhecimento | Sim — apenas o proprio dono |
-| `DELETE` | `/api/conhecimentos/:id` | Remove um conhecimento | Sim — apenas o proprio dono |
+| `PATCH` | `/api/conhecimentos/:id` | Atualiza um conhecimento | Sim — dono ou admin |
+| `DELETE` | `/api/conhecimentos/:id` | Remove um conhecimento | Sim — dono ou admin |
 
 **Body — POST `/api/conhecimentos`**
 ```json
@@ -393,37 +391,30 @@ GET /api/conhecimentos?categoria=TECNOLOGIA&nivel=BASICO&busca=python
 
 ---
 
-### Autenticacao — Implementado
+### Autenticacao e Roles (Admin) — Implementado
 
 > **PDF — Seção "Extras":** "Implementar um sistema de autenticação para: pessoas cadastradas editarem e excluírem apenas suas próprias ofertas."
 
-**Cadastro com senha**
+**Cadastro com senha e Nível de Acesso**
 
-`POST /api/pessoas` agora exige o campo `senha`. A senha é armazenada como hash bcrypt (custo 10) — nunca em texto puro. Nenhum endpoint retorna o campo `senha` nas respostas.
+`POST /api/pessoas` exige o campo `senha` (armazenada como hash bcrypt). O campo `isAdmin` define se o usuário tem privilégios totais sobre o sistema.
 
-**Arquivo:** `src/controllers/pessoa.controller.js` — `bcrypt.hash` no `create`; `src/services/pessoa.service.js` — `omit: { senha: true }` em todas as queries
+**Arquivo:** `src/controllers/pessoa.controller.js`, `prisma/schema.prisma`
 
 **Login e token JWT**
 
-`POST /api/auth/login` valida as credenciais via `bcrypt.compare` e retorna um token JWT assinado com `JWT_SECRET`, contendo `{ id, email }` no payload e validade de 7 dias.
+`POST /api/auth/login` valida as credenciais e retorna um JWT contendo `{ id, email, isAdmin }` no payload.
 
-**Arquivos:** `src/controllers/auth.controller.js`, `src/services/auth.service.js`, `src/routes/auth.routes.js`
+**Arquivos:** `src/controllers/auth.controller.js`, `src/services/auth.service.js`
 
-**Middleware de autenticacao**
+**Middleware e Protecao com Admin Override**
 
-O middleware `authMiddleware` valida o token JWT enviado no header `Authorization: Bearer <token>` e injeta `req.pessoaId` para uso nos controllers. Retorna `401` se o token estiver ausente ou inválido.
+O `authMiddleware` valida o token e injeta `req.pessoaId` e `req.isAdmin`. As rotas de escrita verificam se o usuário é o dono do recurso **OU** se ele é um administrador, permitindo o gerenciamento via dashboard administrativo.
 
-**Arquivo:** `src/middlewares/auth.middleware.js`
+- `PATCH/DELETE /api/pessoas/:id` — Permite se `id === req.pessoaId` ou `req.isAdmin === true`
+- `PATCH/DELETE /api/conhecimentos/:id` — Permite se `conhecimento.pessoaId === req.pessoaId` ou `req.isAdmin === true`
 
-**Protecao de rotas e verificacao de dono**
-
-As rotas de escrita exigem autenticação e verificam se o recurso pertence à pessoa autenticada:
-
-- `PATCH /api/pessoas/:id` e `DELETE /api/pessoas/:id` — retornam `403` se `id !== req.pessoaId`
-- `POST /api/conhecimentos` — exige token
-- `PATCH /api/conhecimentos/:id` e `DELETE /api/conhecimentos/:id` — retornam `403` se o conhecimento não pertencer à pessoa autenticada
-
-**Arquivos:** `src/routes/pessoa.routes.js`, `src/routes/conhecimento.routes.js`, `src/controllers/pessoa.controller.js`, `src/controllers/conhecimento.controller.js`
+**Arquivos:** `src/middlewares/auth.middleware.js`, `src/controllers/pessoa.controller.js`, `src/controllers/conhecimento.controller.js`
 
 ---
 
@@ -444,7 +435,7 @@ dfs12/
 │   │   ├── pessoa.controller.js       # Recebe requisicao, valida e retorna resposta (Pessoa)
 │   │   └── conhecimento.controller.js # Recebe requisicao, valida enums e retorna resposta (Conhecimento)
 │   ├── middlewares/
-│   │   └── auth.middleware.js         # Valida JWT e injeta req.pessoaId
+│   │   └── auth.middleware.js         # Valida JWT e injeta req.pessoaId e req.isAdmin
 │   ├── services/
 │   │   ├── auth.service.js            # Valida credenciais e gera token JWT
 │   │   ├── pessoa.service.js          # Regras de negocio e queries Prisma para Pessoa
