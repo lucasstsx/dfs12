@@ -58,7 +58,19 @@ npx prisma migrate dev
 npx prisma generate
 ```
 
-**6. Inicie o servidor**
+**6. (Opcional) Popule o banco com dados de exemplo**
+```bash
+npx prisma db seed
+```
+
+O seed recria os dados e gera um usuário administrador padrão antes dos demais usuários:
+
+```text
+email: admin@email.com
+senha: 123456
+```
+
+**7. Inicie o servidor**
 ```bash
 npm run dev
 ```

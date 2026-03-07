@@ -9,7 +9,7 @@ export const PessoaController = {
   async create(req, res) {
     try {
 
-      const { nome, email, telefone, descricao, senha } = req.body;
+      const { nome, email, telefone, descricao, senha, isAdmin } = req.body;
       // Verificação simples para garantir que os campos obrigatórios foram enviados
       if (!nome || !email || !telefone || !senha) {
         return res.status(400).json({ error: 'Dados incompletos. Nome, email, telefone e senha são obrigatórios.' });
@@ -19,7 +19,14 @@ export const PessoaController = {
       const senhaHash = await bcrypt.hash(senha, 10);
 
       // Chama a camada de serviço para processar a criação
-      const pessoa = await PessoaService.create({ nome, email, telefone, descricao, senha: senhaHash });
+      const pessoa = await PessoaService.create({ 
+        nome, 
+        email, 
+        telefone, 
+        descricao, 
+        senha: senhaHash,
+        isAdmin: isAdmin === true || isAdmin === 'true' // Garante que seja booleano
+      });
 
       // Remove a senha do retorno para não expô-la na resposta
       const { senha: _, ...pessoaSemSenha } = pessoa;
@@ -89,10 +96,26 @@ export const PessoaController = {
         return res.status(403).json({ error: 'Sem permissão para modificar esta pessoa' });
       }
 
-      const { nome, email, telefone, descricao } = req.body;
+      const { nome, email, telefone, descricao, senha, isAdmin } = req.body;
+
+      const data = {};
+      if (nome) data.nome = nome;
+      if (email) data.email = email;
+      if (telefone) data.telefone = telefone;
+      if (descricao !== undefined) data.descricao = descricao;
+
+      // Se uma nova senha for fornecida, ela deve ser hasheada
+      if (senha) {
+        data.senha = await bcrypt.hash(senha, 10);
+      }
+
+      // Apenas administradores podem alterar o status de admin
+      if (req.isAdmin && isAdmin !== undefined) {
+        data.isAdmin = isAdmin === true || isAdmin === 'true';
+      }
 
       // Tenta atualizar
-      const pessoa = await PessoaService.update(id, { nome, email, telefone, descricao });
+      const pessoa = await PessoaService.update(id, data);
 
 
       return res.status(200).json(pessoa);
